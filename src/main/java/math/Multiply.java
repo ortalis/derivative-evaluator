@@ -1,0 +1,33 @@
+package math;
+
+public class Multiply extends BinaryOperation {
+
+    public Multiply(Operation left, Operation right) {
+        super(left, right);
+    }
+
+    public Operation getLeft() {
+
+        return left;
+    }
+
+    public Operation getRight() {
+
+        return right;
+    }
+
+    public Double getNumericValue(Double val) {
+
+        return left.getNumericValue(val) * right.getNumericValue(val);
+    }
+
+    public Operation getDerivative() {
+
+        return new Addition(new Multiply(left.getDerivative(), right), new Multiply(left, right.getDerivative()));
+    }
+
+    public String toString() {
+
+        return '(' + left.toString() + '*' + right.toString() + ')';
+    }
+}
