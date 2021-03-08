@@ -12,19 +12,19 @@ public class ExpressionConverter {
 
     private String expression;
     private Map<String, Function> functions;
-    private Map<String, Operator> operators;
+    private Map<String, Operator> userOperators;
     private Set<String> variableNames;
 
 
     public ExpressionConverter(String expression){
         this.expression = expression;
-        this.operators = new HashMap<String, Operator>(4);
+        this.userOperators = new HashMap<String, Operator>(4);
         this.functions = new HashMap<String, Function>(4);
         this.variableNames = new HashSet<String>(Arrays.asList("x"));
     }
 
     public Token [] createTokensTree(){
-        Token[] tokens = ShuntingYard.convertToRPN(expression, functions, operators,
+        Token[] tokens = ShuntingYard.convertToRPN(expression, functions, userOperators,
                 variableNames, true);
         return tokens;
 

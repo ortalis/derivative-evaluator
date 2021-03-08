@@ -1,11 +1,13 @@
 package parse;
 
-import math.*;
+import exception.ParseTreeException;
+import math.Operation;
 import net.objecthunter.exp4j.tokenizer.FunctionToken;
 import net.objecthunter.exp4j.tokenizer.NumberToken;
 import net.objecthunter.exp4j.tokenizer.OperatorToken;
 import net.objecthunter.exp4j.tokenizer.Token;
 
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Stack;
@@ -16,15 +18,15 @@ public class ExpressionTree {
     private String expression;
     private Node root;
 
-    public ExpressionTree(String expression){
+    public ExpressionTree(String expression) {
         this.expression = expression;
-        ExpressionConverter convert  = new ExpressionConverter(expression);
-        Token [] tokens = convert.createTokensTree();
+        ExpressionConverter convert = new ExpressionConverter(expression);
+        Token[] tokens = convert.createTokensTree();
         createTree(tokens);
     }
 
-    public Operation getOperationsTree(){
-        if(root == null)
+    public Operation getOperationsTree() {
+        if (root == null)
             return null;
         return root.value;
     }
@@ -32,10 +34,11 @@ public class ExpressionTree {
     /**
      * Build the operations tree based on the evaluated tokens
      * token is an array of evaluated mathematical expression in a postfix order
+     *
      * @param tokens the operations in the tree expression
      * @return the ExpressionTree instance
-     * */
-    private ExpressionTree createTree(Token [] tokens) {
+     */
+    private ExpressionTree createTree(Token[] tokens) {
         Stack<Node> stack = new Stack<Node>();
         Iterator<Token> it = Arrays.asList(tokens).iterator();
         Node newNode;
@@ -45,19 +48,19 @@ public class ExpressionTree {
                 int type = t.getType();
                 switch (type) {
                     case Token.TOKEN_NUMBER:
-                        newNode = new Node(new Constant("" + ((NumberToken) t).getValue()));
+                        newNode = getSimpleOperation(String.valueOf(((NumberToken) t).getValue()));
                         stack.push(newNode);
                         break;
 
                     case Token.TOKEN_VARIABLE:
-                        newNode = new Node(new Variable());
+                        newNode = getSimpleOperation("x");
                         stack.push(newNode);
                         break;
 
                     case Token.TOKEN_OPERATOR:
                         Node ptr1 = stack.pop();
                         Node ptr2 = stack.pop();
-                        newNode = getOperator(t, ptr2, ptr1);
+                        newNode = getOperator(t, ptr2.value, ptr1.value);
                         newNode.left = ptr2;
                         newNode.right = ptr1;
                         stack.push(newNode);
@@ -65,7 +68,7 @@ public class ExpressionTree {
 
                     case Token.TOKEN_FUNCTION:
                         Node t1 = stack.pop();
-                        newNode = getFunction(t, t1);
+                        newNode = getFunction(t, t1.value);
                         stack.push(newNode);
                         break;
 
@@ -74,32 +77,43 @@ public class ExpressionTree {
                 }
             }
             root = stack.pop();
-        }catch (ParseTreeException e){
-                e.printStackTrace();
+        }catch (ParseTreeException ex){
+          ex.printStackTrace();
         }
         return this;
+
     }
 
-    private Node getOperator(Token t, Node t1, Node t2) throws ParseTreeException {
-        switch (((OperatorToken)t).getOperator().getSymbol()) {
-            case "+":	return new Node(new Addition(t1.value, t2.value));
-            case "-":	return new Node(new Subtract(t1.value, t2.value));
-            case "*":	return new Node(new Multiply(t1.value, t2.value));
-            case "/":	return new Node( new Division(t1.value, t2.value));
-            case "^":	return new Node(new Power(t1.value, t2.value));
-            default: throw new ParseTreeException("Illegal operator token found");
-        }
+
+    private Node getSimpleOperation(String symbol) throws ParseTreeException {
+        SimpleOperationArguments args = new SimpleOperationArguments(symbol);
+        SimpleOperationFactory factory = new SimpleOperationFactory();
+        Operation operation = factory.getOperation(args);
+        if(operation == null)
+            throw new ParseTreeException("Issue occurred while simple operation");
+        return new Node(operation);
     }
 
-    private Node getFunction(Token t, Node t1) throws ParseTreeException {
-        switch (((FunctionToken)t).getFunction().getName()) {
-            case "sin":	return new Node(new Sin(t1.value));
-            case "cos":	return new Node(new Cos(t1.value));
-            default: throw new ParseTreeException("Illegal Function token found");
-        }
+    private Node getOperator(Token t, Operation op1, Operation op2) throws ParseTreeException {
+        BinaryOperationArguments args = new BinaryOperationArguments(((OperatorToken) t).getOperator().getSymbol(), op1, op2);
+        BinaryOperationFactory factory = new BinaryOperationFactory();
+        Operation operation = factory.getOperation(args);
+        if(operation == null)
+            throw new ParseTreeException("Issue occurred while parsing operator operation");
+        return new Node(operation);
+    }
+
+    private Node getFunction(Token t, Operation op) throws ParseTreeException {
+        UnaryOperationArguments args = new UnaryOperationArguments(((FunctionToken) t).getFunction().getName(), op);
+        UnaryOperationFactory factory = new UnaryOperationFactory();
+        Operation operation = factory.getOperation(args);
+        if(operation == null)
+            throw new ParseTreeException("Issue occurred while parsing function operation");
+        return new Node(operation);
     }
 
 }
+
 class Node {
     Operation value;
     Node left, right;
